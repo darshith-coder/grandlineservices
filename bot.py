@@ -124,7 +124,7 @@ async def on_ready():
     
     await bot.change_presence(activity=discord.Activity(
         type=discord.ActivityType.watching, 
-        name="the Grand Line | !help"
+        name="the Grand Line | !commands"
     ))
 
 @bot.event
@@ -132,9 +132,9 @@ async def on_command_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
         await ctx.send("🌊 You don't have permission to use this command!")
     elif isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("🌊 Missing arguments! Use `!help` for proper format.")
+        await ctx.send("🌊 Missing arguments! Use `!commands` for proper format.")
     elif isinstance(error, commands.BadArgument):
-        await ctx.send("🌊 Invalid argument! Use `!help` for proper format.")
+        await ctx.send("🌊 Invalid argument! Use `!commands` for proper format.")
     else:
         await ctx.send(f"🌊 An error occurred! {str(error)}")
         print(f"Error: {error}")
@@ -336,8 +336,8 @@ async def top_command(ctx):
     embed.set_footer(text="Grand Line Services | Developed by Darshith Dev")
     await ctx.send(embed=embed)
 
-@bot.command(name='help', aliases=['commands', 'h'])
-async def help_command(ctx):
+@bot.command(name='commands', aliases=['cmds', 'guide', 'h'])
+async def commands_list(ctx):
     """Show all available commands"""
     embed = discord.Embed(
         title="🏴‍☠️ Grand Line Services - Vouch Bot",
@@ -345,14 +345,15 @@ async def help_command(ctx):
         color=discord.Color.gold()
     )
     embed.add_field(
-        name="⚓ Commands",
+        name="⚓ Available Commands",
         value=(
             "`!vouch @user service quality prof comm comment` - **Vouch for someone**\n"
             "`!profile @user` - **View someone's vouch profile**\n"
             "`!vouches @user` - **See recent vouches**\n"
             "`!stats` - **View server statistics**\n"
             "`!top` - **Top vouched members**\n"
-            "`!help` - **Show this message**"
+            "`!commands` - **Show this message**\n"
+            "`!help` - **Built-in Discord help**"
         ),
         inline=False
     )
@@ -362,12 +363,28 @@ async def help_command(ctx):
         inline=False
     )
     embed.add_field(
+        name="📊 Rating Guide",
+        value=(
+            "**Quality:** 1-5 (5 = Excellent)\n"
+            "**Professionalism:** 1-5 (5 = Very Professional)\n"
+            "**Communication:** 1-5 (5 = Great Communication)"
+        ),
+        inline=False
+    )
+    embed.add_field(
         name="👑 Credits",
         value="**Developed by Darshith Dev**\n*Grand Line Services™*",
         inline=False
     )
     embed.set_footer(text="🌊 Even the illiterate can navigate these waters!")
     await ctx.send(embed=embed)
+
+# =============================================
+# REMOVE THE DEFAULT HELP COMMAND
+# =============================================
+
+# Remove the default help command so we can use our own
+bot.remove_command('help')
 
 # =============================================
 # RUN THE BOT
