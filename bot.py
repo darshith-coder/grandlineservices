@@ -5,6 +5,8 @@ import datetime
 import random
 import os
 from typing import Optional
+from flask import Flask
+import threading
 
 # =============================================
 # BOT CONFIGURATION FOR RENDER
@@ -29,6 +31,20 @@ print(f"📌 Log Channel ID: {LOG_CHANNEL_ID if LOG_CHANNEL_ID else 'Not set'}")
 # Bot intents
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents)
+
+# =============================================
+# FLASK SERVER FOR RENDER
+# =============================================
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Grand Line Services Bot is running!"
+
+def run_flask():
+    # Render automatically provides the port in the 'PORT' environment variable
+    # We bind to 0.0.0.0 so Render can find it
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
 
 # =============================================
 # VOUCH SYSTEM
@@ -391,6 +407,12 @@ bot.remove_command('help')
 # =============================================
 
 if __name__ == "__main__":
+    # Start the Flask server in a separate thread so it doesn't block the bot
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.daemon = True
+    flask_thread.start()
+    print("🚀 Flask server started for Render port check...")
+    
     try:
         bot.run(TOKEN)
     except discord.errors.LoginFailure:
