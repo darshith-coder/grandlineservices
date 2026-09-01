@@ -7,7 +7,5 @@ services:
     envVars:
       - key: DISCORD_TOKEN
         sync: false
-      - key: VOUCH_CHANNEL
-        value: 0
-      - key: LOG_CHANNEL
-        value: 0
+      - key: PYTHON_VERSION
+        value: 3.11.0
