@@ -19,14 +19,8 @@ if not TOKEN:
     print("⚠️ Please add DISCORD_TOKEN in Render Environment Variables")
     exit(1)
 
-# Get channel IDs from environment (optional)
-VOUCH_CHANNEL_ID = int(os.getenv('VOUCH_CHANNEL', 0))
-LOG_CHANNEL_ID = int(os.getenv('LOG_CHANNEL', 0))
-
 print(f"🤖 Starting Grand Line Services Bot...")
 print(f"📌 Bot Token: {'*' * 10}✅")
-print(f"📌 Vouch Channel ID: {VOUCH_CHANNEL_ID if VOUCH_CHANNEL_ID else 'Not set'}")
-print(f"📌 Log Channel ID: {LOG_CHANNEL_ID if LOG_CHANNEL_ID else 'Not set'}")
 
 # Bot intents
 intents = discord.Intents.all()
@@ -40,11 +34,6 @@ app = Flask(__name__)
 @app.route('/')
 def home():
     return "Grand Line Services Bot is running!"
-
-def run_flask():
-    # Render automatically provides the port in the 'PORT' environment variable
-    # We bind to 0.0.0.0 so Render can find it
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
 
 # =============================================
 # VOUCH SYSTEM
@@ -144,6 +133,11 @@ async def on_ready():
     ))
 
 @bot.event
+async def on_message(message):
+    # CRITICAL: This allows the bot to process commands
+    await bot.process_commands(message)
+
+@bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
         await ctx.send("🌊 You don't have permission to use this command!")
@@ -158,6 +152,27 @@ async def on_command_error(ctx, error):
 # =============================================
 # COMMANDS
 # =============================================
+
+@bot.command(name='addrole')
+@commands.has_permissions(manage_roles=True)
+async def add_role(ctx, member: discord.Member, role: discord.Role):
+    """Add a role to a member - !addrole @user @role"""
+    
+    # Check if the user's top role is higher than the target role
+    if ctx.author.top_role <= role:
+        await ctx.send("❌ You cannot give a role that is equal to or higher than your own highest role!")
+        return
+    
+    # Check if the bot's top role is higher than the target role
+    if ctx.guild.me.top_role <= role:
+        await ctx.send("❌ I cannot assign that role because it is higher than my own role!")
+        return
+
+    try:
+        await member.add_roles(role)
+        await ctx.send(f"✅ Successfully added {role.mention} to {member.mention}!")
+    except discord.Forbidden:
+        await ctx.send("❌ I do not have permission to manage roles. Please check my Manage Roles permission.")
 
 @bot.command(name='vouch', aliases=['v'])
 async def vouch_command(ctx, member: discord.Member, service: str, quality: int, professionalism: int, communication: int, *, comment: str):
@@ -368,6 +383,7 @@ async def commands_list(ctx):
             "`!vouches @user` - **See recent vouches**\n"
             "`!stats` - **View server statistics**\n"
             "`!top` - **Top vouched members**\n"
+            "`!addrole @user @role` - **Add a role to a member (Requires Manage Roles)**\n"
             "`!commands` - **Show this message**\n"
             "`!help` - **Built-in Discord help**"
         ),
@@ -403,20 +419,25 @@ async def commands_list(ctx):
 bot.remove_command('help')
 
 # =============================================
-# RUN THE BOT
+# RUN THE BOT (SWAPPED THREADS!)
 # =============================================
 
 if __name__ == "__main__":
-    # Start the Flask server in a separate thread so it doesn't block the bot
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.daemon = True
-    flask_thread.start()
-    print("🚀 Flask server started for Render port check...")
+    # Define the bot runner function
+    def run_bot():
+        try:
+            bot.run(TOKEN)
+        except discord.errors.LoginFailure:
+            print("❌ ERROR: Invalid Discord token!")
+            print("⚠️ Please check your DISCORD_TOKEN environment variable")
+        except Exception as e:
+            print(f"❌ ERROR: {e}")
+
+    # Start the Discord bot in a background thread
+    bot_thread = threading.Thread(target=run_bot)
+    bot_thread.daemon = True
+    bot_thread.start()
     
-    try:
-        bot.run(TOKEN)
-    except discord.errors.LoginFailure:
-        print("❌ ERROR: Invalid Discord token!")
-        print("⚠️ Please check your DISCORD_TOKEN environment variable")
-    except Exception as e:
-        print(f"❌ ERROR: {e}")
+    # Run Flask in the main thread (This keeps the port open for Render)
+    print("🚀 Starting Flask server for Render port check...")
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
